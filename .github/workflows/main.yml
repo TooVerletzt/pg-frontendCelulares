@@ -1,0 +1,40 @@
+name: CI/CD deploy frontend celulares
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy-frontend-celulares:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v2
+
+      - name: Mostrar contenido del proyecto
+        run: ls -la
+
+      - name: Descargar y ejecutar contenedor httpd
+        run: docker run -d --name frontend-celulares httpd
+
+      - name: Copiar archivos del frontend al contenedor
+        run: docker cp . frontend-celulares:/usr/local/apache2/htdocs
+
+      - name: Ver contenido dentro del contenedor
+        run: docker exec frontend-celulares ls -la /usr/local/apache2/htdocs
+
+      - name: Crear imagen Docker personalizada
+        run: docker commit --change "ENV MODEL_NAME ${{ secrets.MODEL_NAME }}" frontend-celulares ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }}
+
+      - name: Listar imágenes
+        run: docker images
+
+      - name: Docker Login
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+
+      - name: Subir imagen a Docker Hub
+        run: docker push ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }}
