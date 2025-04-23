@@ -1,40 +1,48 @@
-name: CI/CD deploy frontend celulares
+name: CI/CD deploy frontend-celulares
 
-on:
+on: 
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]  
 
 jobs:
-  deploy-frontend-celulares:
+  ci_cd_deploy_frontend_celulares:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repositorio
-        uses: actions/checkout@v2
+      - run: ls -la
+      - uses: actions/checkout@v2
+      - run: ls -la
+      - run: echo 'hello celulares'
 
-      - name: Mostrar contenido del proyecto
-        run: ls -la
+      - name: download, run httpd image
+        run: |
+          docker run -d --name frontend-celulares httpd
 
-      - name: Descargar y ejecutar contenedor httpd
-        run: docker run -d --name frontend-celulares httpd
+      - name: docker ps
+        run: |
+          docker ps
 
-      - name: Copiar archivos del frontend al contenedor
-        run: docker cp . frontend-celulares:/usr/local/apache2/htdocs
+      - name: cp index.html, js, css to container
+        run: |
+          docker cp . frontend-celulares:/usr/local/apache2/htdocs
 
-      - name: Ver contenido dentro del contenedor
-        run: docker exec frontend-celulares ls -la /usr/local/apache2/htdocs
+      - name: list container contents
+        run: |
+          docker exec frontend-celulares ls -la /usr/local/apache2/htdocs
 
-      - name: Crear imagen Docker personalizada
-        run: docker commit --change "ENV MODEL_NAME ${{ secrets.MODEL_NAME }}" frontend-celulares ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }}
+      - name: build custom docker image
+        run: docker commit --change "ENV MODEL_NAME ${{ secrets.MODEL_NAME }}" frontend-celulares ${{ secrets.DOCKER_USER}}/${{ secrets.MODEL_NAME }}:${{ github.sha }}
 
-      - name: Listar imágenes
-        run: docker images
+      - name: list images
+        run: |
+          docker images
 
-      - name: Docker Login
+      - name: docker login
         env:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
-      - name: Subir imagen a Docker Hub
+      - name: docker push
         run: docker push ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }}
+
